@@ -1,0 +1,21 @@
+#Secrets
+.env
+
+# Airflow runtime files
+airflow/logs/*
+!airflow/logs/.gitkeep
+
+# dbt generated files
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+.vscode/
