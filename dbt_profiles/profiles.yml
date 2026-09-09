@@ -1,0 +1,13 @@
+weather_dbt:
+  target: dev
+
+  outputs:
+    dev:
+      type: postgres
+      host: data-postgres
+      port: 5432
+      user: "{{ env_var('DATA_DB_USER') }}"
+      password: "{{ env_var('DATA_DB_PASSWORD') }}"
+      dbname: "{{ env_var('DATA_DB_NAME') }}"
+      schema: dbt_dev
+      threads: 2

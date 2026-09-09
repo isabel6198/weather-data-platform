@@ -36,11 +36,15 @@ x-airflow-common: &airflow-common
 
     AIRFLOW_CONN_DATA_POSTGRES: postgresql://${DATA_DB_USER}:${DATA_DB_PASSWORD}@data-postgres:5432/${DATA_DB_NAME}
 
+    DBT_PROFILES_DIR: /opt/dbt_profiles
+
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./airflow/config:/opt/airflow/config
+    - ./dbt:/opt/dbt
+    - ./dbt_profiles:/opt/dbt_profiles
 
   user: "${AIRFLOW_UID:-50000}:0"
 
@@ -107,7 +111,7 @@ services:
       POSTGRES_DB: ${DATA_DB_NAME}
 
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DATA_DB_HOST_PORT}:5432"
 
     volumes:
       - data_postgres_data:/var/lib/postgresql/data
