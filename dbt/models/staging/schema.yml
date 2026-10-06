@@ -4,55 +4,62 @@ models:
 
   - name: stg_weather_snapshots
     description: >
-      Données météo issues de la couche raw, nettoyées et renommées pour les transformations dbt
+      Couche de staging des observations météorologiques issues de
+      raw.weather_snapshots. Le modèle normalise les noms de colonnes,
+      conserve les données utiles aux transformations et génère une
+      clé technique unique par observation.
 
     columns:
 
       - name: observation_id
+        description: >
+          Clé technique unique d'une observation, générée à partir
+          de la ville et de l'horodatage de l'observation.
         data_tests:
           - not_null
           - unique
 
       - name: city
+        description: Ville associée à l'observation météorologique.
         data_tests:
           - not_null
 
+      - name: latitude
+        description: Latitude retournée par Open-Meteo.
+
+      - name: longitude
+        description: Longitude retournée par Open-Meteo.
+
       - name: observed_at
+        description: Date et heure UTC de l'observation météorologique.
         data_tests:
           - not_null
 
       - name: temperature_c
+        description: Température observée en degrés Celsius.
         data_tests:
           - not_null
 
       - name: humidity_pct
+        description: Humidité relative exprimée en pourcentage.
         data_tests:
           - not_null
+
+      - name: precipitation_mm
+        description: Précipitations observées en millimètres.
+
+      - name: weather_code
+        description: Code météo fourni par Open-Meteo.
+
+      - name: wind_speed_kmh
+        description: Vitesse du vent en kilomètres par heure.
+
+      - name: source
+        description: Source de l'observation, actuellement Open-Meteo.
 
       - name: ingested_at
-        data_tests:
-          - not_null
-
-  - name: dim_city_current
-    description: >
-      Version actuellement valide des métadonnées
-      de chaque ville, construite à partir du snapshot dbt.
-
-    columns:
-
-      - name: city
-        data_tests:
-          - not_null
-          - unique
-
-      - name: latitude
-        data_tests:
-          - not_null
-
-      - name: longitude
-        data_tests:
-          - not_null
-
-      - name: valid_from
+        description: >
+          Horodatage UTC correspondant au chargement de la donnée
+          dans la couche raw.
         data_tests:
           - not_null

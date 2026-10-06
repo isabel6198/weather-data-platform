@@ -1,0 +1,124 @@
+version: 2
+
+models:
+
+  - name: fct_weather_hourly
+    description: >
+      Table de faits contenant les observations météorologiques
+      par ville et par instant d'observation. Le modèle est matérialisé
+      en incrémental avec une stratégie MERGE. Une fenêtre de
+      recouvrement de deux heures permet de retraiter les données
+      récemment chargées afin de gérer les corrections ou arrivées tardives.
+
+    columns:
+
+      - name: observation_id
+        description: Clé technique unique de l'observation.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: city
+        description: Ville concernée par l'observation.
+        data_tests:
+          - not_null
+
+      - name: observed_at
+        description: Date et heure UTC de l'observation.
+        data_tests:
+          - not_null
+
+      - name: temperature_c
+        description: Température en degrés Celsius.
+
+      - name: humidity_pct
+        description: Humidité relative en pourcentage.
+
+      - name: precipitation_mm
+        description: Précipitations en millimètres.
+
+      - name: wind_speed_kmh
+        description: Vitesse du vent en kilomètres par heure.
+
+      - name: weather_condition
+        description: >
+          Catégorie météorologique dérivée du weather_code grâce
+          à la macro weather_condition.
+
+      - name: ingested_at
+        description: Horodatage du chargement dans la couche raw.
+
+
+  - name: mart_weather_daily
+    description: >
+      Agrégation quotidienne des observations météorologiques par ville.
+      Ce mart fournit des indicateurs synthétiques destinés à l'analyse :
+      températures, humidité, précipitations, vent et nombre d'observations.
+
+    columns:
+
+      - name: city
+        description: Ville concernée par les indicateurs.
+
+      - name: weather_date
+        description: Date des observations agrégées.
+
+      - name: min_temperature_c
+        description: Température minimale observée pendant la journée.
+
+      - name: max_temperature_c
+        description: Température maximale observée pendant la journée.
+
+      - name: avg_temperature_c
+        description: Température moyenne de la journée.
+
+      - name: avg_humidity_pct
+        description: Humidité relative moyenne de la journée.
+
+      - name: total_precipitation_mm
+        description: Précipitations cumulées pendant la journée.
+
+      - name: avg_wind_speed_kmh
+        description: Vitesse moyenne du vent pendant la journée.
+
+      - name: observation_count
+        description: Nombre d'observations utilisées dans l'agrégation.
+
+
+  - name: dim_city_current
+    description: >
+      Dimension contenant la version actuellement valide des
+      métadonnées de chaque ville. Elle est construite à partir du
+      snapshot city_metadata_snapshot et conserve uniquement les
+      enregistrements dont dbt_valid_to est NULL.
+
+    columns:
+
+      - name: city
+        description: Nom de la ville.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: latitude
+        description: Latitude de la ville.
+        data_tests:
+          - not_null
+
+      - name: longitude
+        description: Longitude de la ville.
+        data_tests:
+          - not_null
+
+      - name: elevation
+        description: Altitude fournie par Open-Meteo.
+
+      - name: timezone
+        description: Fuseau horaire retourné par Open-Meteo.
+
+      - name: valid_from
+        description: >
+          Date à partir de laquelle cette version des métadonnées
+          est considérée comme valide.
+        data_tests:
+          - not_null

@@ -1,12 +1,21 @@
 version: 2
 
 sources:
+
   - name: raw
+    description: >
+      Couche d'ingestion brute alimentée par le DAG Airflow
+      weather_pipeline à partir de l'API Open-Meteo.
+
     database: "{{ env_var('DATA_DB_NAME') }}"
     schema: raw
 
     tables:
+
       - name: weather_snapshots
+        description: >
+          Observations météorologiques collectées régulièrement
+          pour les villes suivies par le pipeline.
 
         config:
           loaded_at_field: ingested_at
@@ -20,4 +29,40 @@ sources:
               count: 4
               period: hour
 
+        columns:
+          - name: city
+            description: Ville concernée par l'observation.
+
+          - name: weather_time
+            description: Horodatage de l'observation fourni par Open-Meteo.
+
+          - name: ingested_at
+            description: Horodatage du chargement effectué par Airflow.
+
+
       - name: city_metadata
+        description: >
+          État courant des métadonnées des villes suivies.
+          Cette table mutable sert de source au snapshot dbt
+          city_metadata_snapshot.
+
+        columns:
+          - name: city
+            description: Identifiant métier de la ville.
+
+          - name: latitude
+            description: Latitude retournée par Open-Meteo.
+
+          - name: longitude
+            description: Longitude retournée par Open-Meteo.
+
+          - name: elevation
+            description: Altitude retournée par Open-Meteo.
+
+          - name: timezone
+            description: Fuseau horaire retourné par Open-Meteo.
+
+          - name: updated_at
+            description: >
+              Horodatage modifié uniquement lorsqu'une métadonnée
+              de la ville change réellement.

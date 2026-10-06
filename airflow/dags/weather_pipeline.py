@@ -191,7 +191,7 @@ def weather_pipeline():
                 rows,
             )
 
-        # Upsert des metadonnes 
+        # Upsert des métadonnées
         metadata_sql = """
             INSERT INTO raw.city_metadata (
                 city,
@@ -235,7 +235,7 @@ def weather_pipeline():
         connection.close()
 
         print(
-            f"{len(rows)} villes chargées"
+            f"{len(rows)} villes chargées "
             f"depuis Open-Meteo"
         )
 
@@ -295,7 +295,7 @@ def weather_pipeline():
                 "Certaines villes sont absentes de raw."
             )
 
-    
+
     @task
     def validate_marts():
 
@@ -351,7 +351,7 @@ def weather_pipeline():
         if daily_rows == 0:
             raise ValueError(
                 "Le mart quotidien est vide"
-            )   
+            )
 
     with TaskGroup(
         group_id ="ingestion"
@@ -386,7 +386,7 @@ def weather_pipeline():
                 --target dev
         """,
         )
-        
+
         dbt_source_freshness >> dbt_build
 
 
@@ -396,7 +396,7 @@ def weather_pipeline():
 
         marts_validated = validate_marts()
 
-    ingestion_group >> transformation_group >> validation_group 
+    ingestion_group >> transformation_group >> validation_group
 
 
 weather_pipeline()

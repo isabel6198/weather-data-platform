@@ -1,0 +1,33 @@
+version: 2
+
+models:
+
+  - name: int_weather_enriched
+    description: >
+      Couche intermédiaire enrichissant les observations météo nettoyées
+      avec des attributs dérivés utiles aux modèles analytiques :
+      date, heure, indicateur de pluie et condition météorologique.
+
+    columns:
+
+      - name: observation_id
+        description: Clé technique unique de l'observation.
+
+      - name: city
+        description: Ville concernée par l'observation.
+
+      - name: weather_date
+        description: Date dérivée de l'horodatage de l'observation.
+
+      - name: weather_hour
+        description: Heure dérivée de l'horodatage de l'observation.
+
+      - name: is_raining
+        description: >
+          Indicateur booléen précisant si des précipitations
+          supérieures à zéro ont été observées.
+
+      - name: weather_condition
+        description: >
+          Catégorie météo dérivée du code Open-Meteo à l'aide
+          de la macro weather_condition.

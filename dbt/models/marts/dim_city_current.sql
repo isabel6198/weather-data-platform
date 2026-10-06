@@ -1,5 +1,5 @@
 
-SELECT  
+SELECT
         city,
         latitude,
         longitude,
