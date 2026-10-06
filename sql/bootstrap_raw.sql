@@ -19,4 +19,11 @@ CREATE TABLE IF NOT EXISTS raw.weather_snapshots (
 );
 
 
-
+CREATE TABLE IF NOT EXISTS raw.city_metadata (
+    city        TEXT PRIMARY KEY,
+    latitude    DOUBLE PRECISION NOT NULL,
+    longitude   DOUBLE PRECISION NOT NULL,
+    elevation   DOUBLE PRECISION,
+    timezone    TEXT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

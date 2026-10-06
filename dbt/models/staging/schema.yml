@@ -4,8 +4,7 @@ models:
 
   - name: stg_weather_snapshots
     description: >
-      Données météo issues de la couche raw,
-      nettoyées et renommées pour les transformations dbt.
+      Données météo issues de la couche raw, nettoyées et renommées pour les transformations dbt
 
     columns:
 
@@ -31,5 +30,29 @@ models:
           - not_null
 
       - name: ingested_at
+        data_tests:
+          - not_null
+
+  - name: dim_city_current
+    description: >
+      Version actuellement valide des métadonnées
+      de chaque ville, construite à partir du snapshot dbt.
+
+    columns:
+
+      - name: city
+        data_tests:
+          - not_null
+          - unique
+
+      - name: latitude
+        data_tests:
+          - not_null
+
+      - name: longitude
+        data_tests:
+          - not_null
+
+      - name: valid_from
         data_tests:
           - not_null

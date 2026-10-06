@@ -1,12 +1,9 @@
 SELECT
 
-    md5(
-        concat_ws(
-            '|',
-            city,
-            weather_time::text
-        )
-    ) AS observation_id,
+   {{ dbt_utils.generate_surrogate_key([
+    'city',
+    'weather_time'
+    ]) }} AS observation_id,
 
     trim(city) AS city,
 

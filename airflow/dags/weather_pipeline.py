@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta, timezone
-
+import logging
 import pendulum
 
-from airflow.sdk import dag, task
+
+from datetime import datetime, timedelta, timezone
+
+from airflow.sdk import dag, task, TaskGroup
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.standard.operators.bash import BashOperator
 
@@ -15,6 +17,25 @@ CITIES = [
 ]
 
 
+def log_task_failure(context):
+
+    task_instance = context["task_instance"]
+    exception = context.get("exception")
+
+    logging.error(
+        "PIPELINE FAILURE  | "
+        "dag_id=%s | "
+        "task_id=%s | "
+        "run_id=%s | "
+        "try_number=%s | "
+        "exception=%s",
+        task_instance.dag_id,
+        task_instance.task_id,
+        task_instance.run_id,
+        task_instance.try_number,
+        exception,
+    )
+
 @dag(
     dag_id="weather_pipeline",
     schedule="0 * * * *",
@@ -24,6 +45,11 @@ CITIES = [
     ),
     catchup=False,
     max_active_runs=1,
+
+    default_args={
+        "on_failure_callback": log_task_failure,
+        },
+
     tags=["weather", "airflow", "dbt"],
 )
 def weather_pipeline():
@@ -67,7 +93,7 @@ def weather_pipeline():
         payload = response.json()
 
         # Avec plusieurs coordonnées,
-        # Open-Meteo renvoie une liste de réponses.
+        # Open-Meteo renvoie une liste de réponses
         if not isinstance(payload, list):
             payload = [payload]
 
@@ -79,7 +105,9 @@ def weather_pipeline():
 
         ingested_at = datetime.now(timezone.utc)
 
-        rows = []
+        rows = [] # observations méteo
+
+        metadata_rows = []  #état courant des villes
 
         for city, weather_data in zip(CITIES, payload):
 
@@ -107,6 +135,15 @@ def weather_pipeline():
                     current["wind_speed_10m"],
                     "open-meteo",
                     ingested_at,
+                )
+            )
+            metadata_rows.append(
+                (
+                    city["name"],
+                    weather_data["latitude"],
+                    weather_data["longitude"],
+                    weather_data.get("elevation"),
+                    weather_data.get("timezone"),
                 )
             )
 
@@ -140,8 +177,7 @@ def weather_pipeline():
                 latitude = EXCLUDED.latitude,
                 longitude = EXCLUDED.longitude,
                 temperature_2m = EXCLUDED.temperature_2m,
-                relative_humidity_2m =
-                    EXCLUDED.relative_humidity_2m,
+                relative_humidity_2m = EXCLUDED.relative_humidity_2m,
                 precipitation = EXCLUDED.precipitation,
                 weather_code = EXCLUDED.weather_code,
                 wind_speed_10m = EXCLUDED.wind_speed_10m,
@@ -155,12 +191,52 @@ def weather_pipeline():
                 rows,
             )
 
+        # Upsert des metadonnes 
+        metadata_sql = """
+            INSERT INTO raw.city_metadata (
+                city,
+                latitude,
+                longitude,
+                elevation,
+                timezone
+            )
+            VALUES (%s, %s, %s, %s, %s)
+
+            ON CONFLICT (city)
+            DO UPDATE SET
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                elevation = EXCLUDED.elevation,
+                timezone = EXCLUDED.timezone,
+                updated_at = NOW()
+
+            WHERE (
+                raw.city_metadata.latitude,
+                raw.city_metadata.longitude,
+                raw.city_metadata.elevation,
+                raw.city_metadata.timezone
+            )
+            IS DISTINCT FROM (
+                EXCLUDED.latitude,
+                EXCLUDED.longitude,
+                EXCLUDED.elevation,
+                EXCLUDED.timezone
+            );
+        """
+
+        with connection.cursor() as cursor:
+            cursor.executemany(
+                metadata_sql,
+                metadata_rows,
+            )
+
+
         connection.commit()
         connection.close()
 
         print(
-            f"{len(rows)} villes chargées "
-            f"depuis Open-Meteo."
+            f"{len(rows)} villes chargées"
+            f"depuis Open-Meteo"
         )
 
         return {
@@ -219,27 +295,7 @@ def weather_pipeline():
                 "Certaines villes sont absentes de raw."
             )
 
-    dbt_source_freshness = BashOperator(
-        task_id="dbt_source_freshness",
-        bash_command="""
-            cd /opt/dbt &&
-            /opt/dbt-venv/bin/dbt source freshness \
-                --profiles-dir /opt/dbt_profiles \
-                --target dev
-        """,
-    )
-
-    dbt_build = BashOperator(
-    task_id="dbt_build",
-    bash_command="""
-        cd /opt/dbt &&
-        /opt/dbt-venv/bin/dbt build \
-            --profiles-dir /opt/dbt_profiles \
-            --target dev
-    """,
-    )
     
-        
     @task
     def validate_marts():
 
@@ -294,19 +350,53 @@ def weather_pipeline():
 
         if daily_rows == 0:
             raise ValueError(
-                "Le mart quotidien est vide."
-            )
+                "Le mart quotidien est vide"
+            )   
 
-    metadata = ingest_weather()
+    with TaskGroup(
+        group_id ="ingestion"
+    ) as ingestion_group:
 
-    raw_validated = validate_raw(metadata)
+        metadata = ingest_weather()
 
-    marts_validated = validate_marts()
+        validate_raw(metadata)
 
 
-    raw_validated >> dbt_source_freshness
-    dbt_source_freshness >> dbt_build
-    dbt_build >> marts_validated
+
+    with TaskGroup(
+        group_id="transformation"
+    ) as transformation_group:
+
+        dbt_source_freshness = BashOperator(
+            task_id="dbt_source_freshness",
+            bash_command="""
+                cd /opt/dbt &&
+                /opt/dbt-venv/bin/dbt source freshness \
+                    --profiles-dir /opt/dbt_profiles \
+                    --target dev
+            """,
+        )
+
+        dbt_build = BashOperator(
+        task_id="dbt_build",
+        bash_command="""
+            cd /opt/dbt &&
+            /opt/dbt-venv/bin/dbt build \
+                --profiles-dir /opt/dbt_profiles \
+                --target dev
+        """,
+        )
+        
+        dbt_source_freshness >> dbt_build
+
+
+    with TaskGroup(
+        group_id="validation"
+    ) as validation_group:
+
+        marts_validated = validate_marts()
+
+    ingestion_group >> transformation_group >> validation_group 
 
 
 weather_pipeline()

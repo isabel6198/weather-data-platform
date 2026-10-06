@@ -19,3 +19,5 @@ sources:
             error_after:
               count: 4
               period: hour
+
+      - name: city_metadata
