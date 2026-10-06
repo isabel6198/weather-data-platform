@@ -1,4 +1,4 @@
-#Secrets
+# Secrets
 .env
 
 # Airflow runtime files
@@ -18,4 +18,5 @@ venv/
 
 # OS / editors
 .DS_Store
+Thumbs.db
 .vscode/
