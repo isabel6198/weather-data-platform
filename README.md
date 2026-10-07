@@ -290,7 +290,7 @@ Le projet a été développé avec WSL2 sous Windows.
 ### 1. Cloner le projet
 
 ```bash
-git clone <URL_DU_REPOSITORY>
+git clone https://github.com/isabel6198/weather-data-platform.git
 cd weather-data-platform
 ```
 
@@ -496,9 +496,3 @@ Pour une utilisation en production, le projet pourrait notamment évoluer vers :
 - davantage de monitoring ;
 - des data contracts ;
 - une ingestion historique basée sur les data intervals Airflow pour permettre des backfills reproductibles.
-
----
-
-## À propos du projet
-
-Projet personnel de Data Engineering centré sur l’orchestration avec Airflow et la transformation analytique avec dbt.
